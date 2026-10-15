@@ -173,6 +173,14 @@ func (p *Parser) Parse(pkts []protocol.Data, msgCh chan protocol.Message, wg *sy
 	copy(p.signal, p.signal[cfg.BlockSize:])
 	copy(p.signal[cfg.PacketLength:], p.Decoder.Signal[cfg.SymbolLength:])
 
+	// filter and quantize recompute the whole buffer from p.signal and are
+	// only read by the packet loop below, so skip them when the preamble
+	// search found nothing. This was most of rtlamr's CPU time.
+	if len(pkts) == 0 {
+		wg.Done()
+		return
+	}
+
 	p.filter()
 	p.quantize()
 
