@@ -143,6 +143,10 @@ func (rcvr *Receiver) Run() {
 	// Allocate a channel of blocks.
 	blockCh := make(chan []byte)
 
+	// RTLAMR_SAMPLECLOCK=1 stamps messages with stream time instead of wall time.
+	sampleClock := os.Getenv("RTLAMR_SAMPLECLOCK") != ""
+	var samplesIn int64
+
 	// Make maps for tracking messages spanning sample blocks.
 	prev := map[protocol.Digest]bool{}
 	next := map[protocol.Digest]bool{}
@@ -230,6 +234,7 @@ func (rcvr *Receiver) Run() {
 					io.CopyN(io.Discard, sampleBuf, int64(len(block)))
 				}
 				sampleBuf.Write(block)
+				samplesIn += int64(len(block) >> 1)
 
 				pktFound := false
 
@@ -243,6 +248,10 @@ func (rcvr *Receiver) Run() {
 					// Make a new LogMessage
 					var logMsg protocol.LogMessage
 					logMsg.Time = time.Now()
+					if sampleClock {
+						// Time since the start of the stream, for replays.
+						logMsg.Time = time.Unix(0, 0).UTC().Add(time.Duration(float64(samplesIn) / float64(rcvr.d.Cfg.SampleRate) * float64(time.Second)))
+					}
 					if s, ok := sampleWriter.(io.Seeker); ok {
 						logMsg.Offset, _ = s.Seek(0, io.SeekCurrent)
 					}
