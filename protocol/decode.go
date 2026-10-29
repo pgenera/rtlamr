@@ -171,6 +171,8 @@ func (d Decoder) Decode(input []byte) chan Message {
 	// Perform matched filter on new block.
 	d.Filter(d.Signal, d.Quantized[d.Cfg.PacketLength:])
 
+	d.pack()
+
 	msgCh := make(chan Message)
 
 	// For each preamble.
@@ -244,18 +246,10 @@ func (d Decoder) Filter(input []float32, output []byte) {
 	}
 }
 
-// Return a list of indices into the quantized signal at which a valid preamble
-// exists.
-//  1. Pack the quantized signal into bytes.
-//  2. Build a list of indices by eliminating bytes that contain no bits matching
-//     the first bit of the preamble.
-//  3. Continue eliminating indices at which the preamble cannot exist.
-//  4. Convert indices from byte-based to sample-based.
-//  5. Check each of these indices for the preamble.
-func (d *Decoder) Search(preamble []byte) []int {
-	symLenByte := d.Cfg.SymbolLength >> 3
-
-	// Pack the bit-wise quantized signal into bytes.
+// Pack the bit-wise quantized signal into bytes for Search. The packed signal
+// doesn't depend on the preamble, so Decode does this once per block rather
+// than once per preamble.
+func (d *Decoder) pack() {
 	for bIdx := range d.packed {
 		var b byte
 		for _, qBit := range d.Quantized[bIdx<<3 : (bIdx+1)<<3] {
@@ -263,6 +257,18 @@ func (d *Decoder) Search(preamble []byte) []int {
 		}
 		d.packed[bIdx] = b
 	}
+}
+
+// Return a list of indices into the quantized signal at which a valid preamble
+// exists.
+//  1. Use the quantized signal packed into bytes (by pack, from Decode).
+//  2. Build a list of indices by eliminating bytes that contain no bits matching
+//     the first bit of the preamble.
+//  3. Continue eliminating indices at which the preamble cannot exist.
+//  4. Convert indices from byte-based to sample-based.
+//  5. Check each of these indices for the preamble.
+func (d *Decoder) Search(preamble []byte) []int {
+	symLenByte := d.Cfg.SymbolLength >> 3
 
 	// For each bit in the preamble.
 	for pIdx, pBit := range preamble {
