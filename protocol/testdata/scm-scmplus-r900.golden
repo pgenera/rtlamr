@@ -1,0 +1,3 @@
+7 SCM {"ID":14460086,"Type":12,"TamperPhy":3,"TamperEnc":0,"Consumption":857790,"ChecksumVal":15843}
+15 R900 {"ID":706937852,"Unkn1":131,"NoUse":1,"BackFlow":1,"Consumption":58176,"Unkn3":0,"Leak":1,"LeakNow":0}
+23 SCM+ {"FrameSync":5795,"ProtocolID":30,"EndpointType":7,"EndpointID":1550145278,"Consumption":5857898,"Tamper":513,"PacketCRC":36548}
